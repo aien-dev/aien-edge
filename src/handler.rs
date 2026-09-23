@@ -24,7 +24,11 @@ pub enum Scheme {
 
 pub fn handle<B>(req: &Request<B>, sites: &Sites, scheme: Scheme) -> Response<Full<Bytes>> {
     let host = request_host(req);
-    let path_and_query = req.uri().path_and_query().map(|p| p.as_str()).unwrap_or("/");
+    let path_and_query = req
+        .uri()
+        .path_and_query()
+        .map(|p| p.as_str())
+        .unwrap_or("/");
 
     if let Some(canonical) = sites.redirects.get(&host) {
         return redirect(&format!("https://{canonical}{path_and_query}"), scheme);
@@ -36,8 +40,13 @@ pub fn handle<B>(req: &Request<B>, sites: &Sites, scheme: Scheme) -> Response<Fu
         return redirect(&format!("https://{host}{path_and_query}"), scheme);
     }
     if req.method() != Method::GET && req.method() != Method::HEAD {
-        let mut r = plain(StatusCode::METHOD_NOT_ALLOWED, "method not allowed\n", scheme);
-        r.headers_mut().insert(header::ALLOW, HeaderValue::from_static("GET, HEAD"));
+        let mut r = plain(
+            StatusCode::METHOD_NOT_ALLOWED,
+            "method not allowed\n",
+            scheme,
+        );
+        r.headers_mut()
+            .insert(header::ALLOW, HeaderValue::from_static("GET, HEAD"));
         return r;
     }
     let Some((asset, code)) = site.resolve(req.uri().path()) else {
@@ -50,14 +59,26 @@ pub fn handle<B>(req: &Request<B>, sites: &Sites, scheme: Scheme) -> Response<Fu
         .header(header::CACHE_CONTROL, asset.cache_control)
         .header(header::VARY, "Accept-Encoding");
     if code == 200 {
-        let inm = req.headers().get(header::IF_NONE_MATCH).and_then(|v| v.to_str().ok());
-        if inm.is_some_and(|v| v.split(',').any(|t| t.trim() == asset.etag || t.trim() == "*")) {
-            let mut r = builder.status(StatusCode::NOT_MODIFIED).body(Full::new(Bytes::new())).unwrap();
+        let inm = req
+            .headers()
+            .get(header::IF_NONE_MATCH)
+            .and_then(|v| v.to_str().ok());
+        if inm.is_some_and(|v| {
+            v.split(',')
+                .any(|t| t.trim() == asset.etag || t.trim() == "*")
+        }) {
+            let mut r = builder
+                .status(StatusCode::NOT_MODIFIED)
+                .body(Full::new(Bytes::new()))
+                .unwrap();
             security_headers(&mut r, scheme);
             return r;
         }
     }
-    let accept = req.headers().get(header::ACCEPT_ENCODING).and_then(|v| v.to_str().ok());
+    let accept = req
+        .headers()
+        .get(header::ACCEPT_ENCODING)
+        .and_then(|v| v.to_str().ok());
     let body = match pick_encoding(accept, asset) {
         Encoding::Brotli => {
             builder = builder.header(header::CONTENT_ENCODING, "br");
@@ -70,7 +91,11 @@ pub fn handle<B>(req: &Request<B>, sites: &Sites, scheme: Scheme) -> Response<Fu
         Encoding::Identity => asset.body.clone(),
     };
     builder = builder.header(header::CONTENT_LENGTH, body.len());
-    let body = if req.method() == Method::HEAD { Bytes::new() } else { body };
+    let body = if req.method() == Method::HEAD {
+        Bytes::new()
+    } else {
+        body
+    };
     let mut r = builder.status(code).body(Full::new(body)).unwrap();
     security_headers(&mut r, scheme);
     r
@@ -81,7 +106,12 @@ fn request_host<B>(req: &Request<B>) -> String {
         .uri()
         .host()
         .map(str::to_string)
-        .or_else(|| req.headers().get(header::HOST).and_then(|h| h.to_str().ok()).map(str::to_string))
+        .or_else(|| {
+            req.headers()
+                .get(header::HOST)
+                .and_then(|h| h.to_str().ok())
+                .map(str::to_string)
+        })
         .unwrap_or_default();
     // Strip a port and any trailing dot, and compare case-insensitively.
     let no_port = match raw.rsplit_once(':') {
@@ -116,12 +146,24 @@ fn plain(status: StatusCode, msg: &'static str, scheme: Scheme) -> Response<Full
 fn security_headers(r: &mut Response<Full<Bytes>>, scheme: Scheme) {
     let h = r.headers_mut();
     h.insert(header::SERVER, HeaderValue::from_static("aien-edge"));
-    h.insert(header::X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
-    h.insert(header::REFERRER_POLICY, HeaderValue::from_static("strict-origin-when-cross-origin"));
+    h.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    h.insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("strict-origin-when-cross-origin"),
+    );
     h.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
-    h.insert("permissions-policy", HeaderValue::from_static("camera=(), microphone=(), geolocation=()"));
+    h.insert(
+        "permissions-policy",
+        HeaderValue::from_static("camera=(), microphone=(), geolocation=()"),
+    );
     if let Scheme::Https = scheme {
-        h.insert(header::STRICT_TRANSPORT_SECURITY, HeaderValue::from_static("max-age=31536000"));
+        h.insert(
+            header::STRICT_TRANSPORT_SECURITY,
+            HeaderValue::from_static("max-age=31536000"),
+        );
     }
 }
 
@@ -142,7 +184,11 @@ mod tests {
     }
 
     fn get(host: &str, path: &str) -> Request<()> {
-        Request::builder().uri(path).header("host", host).body(()).unwrap()
+        Request::builder()
+            .uri(path)
+            .header("host", host)
+            .body(())
+            .unwrap()
     }
 
     #[test]
@@ -150,7 +196,10 @@ mod tests {
         let (_d, s) = sites();
         let r = handle(&get("Example.com.", "/a?b=1"), &s, Scheme::Https);
         assert_eq!(r.status(), 301);
-        assert_eq!(r.headers()[header::LOCATION], "https://www.example.com/a?b=1");
+        assert_eq!(
+            r.headers()[header::LOCATION],
+            "https://www.example.com/a?b=1"
+        );
     }
 
     #[test]
@@ -164,7 +213,8 @@ mod tests {
     fn serves_brotli_and_honors_etag() {
         let (_d, s) = sites();
         let mut req = get("www.example.com", "/");
-        req.headers_mut().insert(header::ACCEPT_ENCODING, HeaderValue::from_static("br"));
+        req.headers_mut()
+            .insert(header::ACCEPT_ENCODING, HeaderValue::from_static("br"));
         let r = handle(&req, &s, Scheme::Https);
         assert_eq!(r.status(), 200);
         assert_eq!(r.headers()[header::CONTENT_ENCODING], "br");
@@ -177,8 +227,16 @@ mod tests {
     #[test]
     fn unknown_host_and_bad_method() {
         let (_d, s) = sites();
-        assert_eq!(handle(&get("evil.test", "/"), &s, Scheme::Https).status(), 421);
-        let post = Request::builder().method("POST").uri("/").header("host", "www.example.com").body(()).unwrap();
+        assert_eq!(
+            handle(&get("evil.test", "/"), &s, Scheme::Https).status(),
+            421
+        );
+        let post = Request::builder()
+            .method("POST")
+            .uri("/")
+            .header("host", "www.example.com")
+            .body(())
+            .unwrap();
         assert_eq!(handle(&post, &s, Scheme::Https).status(), 405);
     }
 }

@@ -42,7 +42,11 @@ impl SiteFiles {
         if !files.contains_key("index.html") {
             return Err(format!("{} has no index.html", root.display()));
         }
-        Ok(SiteFiles { files, spa, bytes_raw })
+        Ok(SiteFiles {
+            files,
+            spa,
+            bytes_raw,
+        })
     }
 
     /// Resolve a request path to an asset and the status to serve it with.
@@ -51,7 +55,11 @@ impl SiteFiles {
         let key = normalize(path)?;
         let candidates = [
             key.clone(),
-            if key.is_empty() { "index.html".into() } else { format!("{key}/index.html") },
+            if key.is_empty() {
+                "index.html".into()
+            } else {
+                format!("{key}/index.html")
+            },
             format!("{key}.html"),
         ];
         for c in candidates.iter() {
@@ -100,7 +108,9 @@ fn percent_decode(s: &str) -> Option<String> {
 }
 
 pub fn pick_encoding(accept: Option<&str>, asset: &Asset) -> Encoding {
-    let Some(accept) = accept else { return Encoding::Identity };
+    let Some(accept) = accept else {
+        return Encoding::Identity;
+    };
     let allows = |name: &str| {
         accept.split(',').any(|tok| {
             let mut it = tok.trim().split(';');
@@ -121,7 +131,12 @@ pub fn pick_encoding(accept: Option<&str>, asset: &Asset) -> Encoding {
     }
 }
 
-fn walk(root: &Path, dir: &Path, out: &mut HashMap<String, Asset>, total: &mut usize) -> Result<(), String> {
+fn walk(
+    root: &Path,
+    dir: &Path,
+    out: &mut HashMap<String, Asset>,
+    total: &mut usize,
+) -> Result<(), String> {
     let entries = std::fs::read_dir(dir).map_err(|e| format!("read_dir {}: {e}", dir.display()))?;
     for entry in entries {
         let entry = entry.map_err(|e| e.to_string())?;
@@ -139,7 +154,11 @@ fn walk(root: &Path, dir: &Path, out: &mut HashMap<String, Asset>, total: &mut u
             .map_err(|e| e.to_string())?
             .to_string_lossy()
             .replace('\\', "/");
-        if rel.ends_with(".map") || rel.split('/').any(|s| s.starts_with('.') && s != ".well-known") {
+        if rel.ends_with(".map")
+            || rel
+                .split('/')
+                .any(|s| s.starts_with('.') && s != ".well-known")
+        {
             continue;
         }
         let body = std::fs::read(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
@@ -152,7 +171,10 @@ fn walk(root: &Path, dir: &Path, out: &mut HashMap<String, Asset>, total: &mut u
 fn build_asset(rel: &str, body: Vec<u8>) -> Asset {
     let mime = mime_guess::from_path(rel).first_or_octet_stream();
     let text_like = mime.type_() == "text"
-        || matches!(mime.subtype().as_str(), "javascript" | "json" | "xml" | "svg")
+        || matches!(
+            mime.subtype().as_str(),
+            "javascript" | "json" | "xml" | "svg"
+        )
         || mime.essence_str() == "image/svg+xml"
         || rel.ends_with(".webmanifest");
     let content_type = if mime.type_() == "text" || mime.subtype() == "javascript" {
@@ -179,7 +201,14 @@ fn build_asset(rel: &str, body: Vec<u8>) -> Asset {
     } else {
         "public, max-age=3600"
     };
-    Asset { body: Bytes::from(body), br, gzip, content_type, etag, cache_control }
+    Asset {
+        body: Bytes::from(body),
+        br,
+        gzip,
+        content_type,
+        etag,
+        cache_control,
+    }
 }
 
 fn brotli_bytes(data: &[u8]) -> Vec<u8> {
@@ -223,7 +252,14 @@ mod tests {
 
     #[test]
     fn resolves_prerendered_routes_and_404() {
-        let (_d, s) = site(&[("index.html", "home"), ("dad/index.html", "dad"), ("404.html", "nf")], false);
+        let (_d, s) = site(
+            &[
+                ("index.html", "home"),
+                ("dad/index.html", "dad"),
+                ("404.html", "nf"),
+            ],
+            false,
+        );
         assert_eq!(s.resolve("/").unwrap().1, 200);
         assert_eq!(&s.resolve("/dad").unwrap().0.body[..], b"dad");
         assert_eq!(&s.resolve("/dad/").unwrap().0.body[..], b"dad");
@@ -240,7 +276,14 @@ mod tests {
 
     #[test]
     fn hidden_files_and_sourcemaps_are_not_served() {
-        let (_d, s) = site(&[("index.html", "x"), (".env", "secret"), ("assets/a.js.map", "{}")], false);
+        let (_d, s) = site(
+            &[
+                ("index.html", "x"),
+                (".env", "secret"),
+                ("assets/a.js.map", "{}"),
+            ],
+            false,
+        );
         assert!(!s.files.contains_key(".env"));
         assert!(!s.files.contains_key("assets/a.js.map"));
     }
@@ -250,7 +293,10 @@ mod tests {
         let big = "x".repeat(4096);
         let (_d, s) = site(&[("index.html", &big)], false);
         let a = s.files.get("index.html").unwrap();
-        assert_eq!(pick_encoding(Some("gzip, deflate, br"), a), Encoding::Brotli);
+        assert_eq!(
+            pick_encoding(Some("gzip, deflate, br"), a),
+            Encoding::Brotli
+        );
         assert_eq!(pick_encoding(Some("gzip"), a), Encoding::Gzip);
         assert_eq!(pick_encoding(Some("br;q=0, gzip"), a), Encoding::Gzip);
         assert_eq!(pick_encoding(None, a), Encoding::Identity);

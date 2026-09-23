@@ -43,10 +43,14 @@ fn load_sites(cfg: &config::Config) -> Result<Sites, String> {
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+        )
         .init();
 
-    let path = std::env::args().nth(1).unwrap_or_else(|| "/etc/aien-edge/config.toml".into());
+    let path = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "/etc/aien-edge/config.toml".into());
     let cfg = match config::Config::load(std::path::Path::new(&path)) {
         Ok(c) => c,
         Err(e) => {
@@ -68,24 +72,41 @@ async fn main() {
         let sites = sites.clone();
         let cfg = cfg.clone();
         tokio::spawn(async move {
-            let mut hup = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup()).expect("SIGHUP handler");
+            let mut hup = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::hangup())
+                .expect("SIGHUP handler");
             while hup.recv().await.is_some() {
                 match load_sites(&cfg) {
                     Ok(s) => {
                         sites.store(Arc::new(s));
                         tracing::info!("reloaded sites");
                     }
-                    Err(e) => tracing::error!(error = %e, "reload failed; still serving previous sites"),
+                    Err(e) => {
+                        tracing::error!(error = %e, "reload failed; still serving previous sites")
+                    }
                 }
             }
         });
     }
 
-    let http_scheme = if cfg.tls.is_some() { Scheme::HttpRedirect } else { Scheme::HttpServe };
-    let http = tokio::spawn(serve_plain(cfg.http_listen.clone(), sites.clone(), permits.clone(), http_scheme));
+    let http_scheme = if cfg.tls.is_some() {
+        Scheme::HttpRedirect
+    } else {
+        Scheme::HttpServe
+    };
+    let http = tokio::spawn(serve_plain(
+        cfg.http_listen.clone(),
+        sites.clone(),
+        permits.clone(),
+        http_scheme,
+    ));
 
     if let Some(tls) = cfg.tls.clone() {
-        let https = tokio::spawn(serve_tls(tls, cfg.all_hosts(), sites.clone(), permits.clone()));
+        let https = tokio::spawn(serve_tls(
+            tls,
+            cfg.all_hosts(),
+            sites.clone(),
+            permits.clone(),
+        ));
         let _ = tokio::join!(http, https);
     } else {
         let _ = http.await;
@@ -94,17 +115,30 @@ async fn main() {
 
 fn builder() -> Builder<TokioExecutor> {
     let mut b = Builder::new(TokioExecutor::new());
-    b.http1().timer(TokioTimer::new()).header_read_timeout(HEADER_READ_TIMEOUT);
+    b.http1()
+        .timer(TokioTimer::new())
+        .header_read_timeout(HEADER_READ_TIMEOUT);
     b.http2().timer(TokioTimer::new());
     b
 }
 
-async fn serve_plain(addr: String, sites: Arc<ArcSwap<Sites>>, permits: Arc<Semaphore>, scheme: Scheme) {
-    let listener = TcpListener::bind(&addr).await.unwrap_or_else(|e| panic!("bind {addr}: {e}"));
+async fn serve_plain(
+    addr: String,
+    sites: Arc<ArcSwap<Sites>>,
+    permits: Arc<Semaphore>,
+    scheme: Scheme,
+) {
+    let listener = TcpListener::bind(&addr)
+        .await
+        .unwrap_or_else(|e| panic!("bind {addr}: {e}"));
     tracing::info!(%addr, "http listening");
     loop {
-        let Ok((tcp, _)) = listener.accept().await else { continue };
-        let Ok(permit) = permits.clone().try_acquire_owned() else { continue };
+        let Ok((tcp, _)) = listener.accept().await else {
+            continue;
+        };
+        let Ok(permit) = permits.clone().try_acquire_owned() else {
+            continue;
+        };
         let sites = sites.clone();
         tokio::spawn(async move {
             let _permit = permit;
@@ -119,14 +153,21 @@ async fn serve_plain(addr: String, sites: Arc<ArcSwap<Sites>>, permits: Arc<Sema
     }
 }
 
-async fn serve_tls(tls: config::Tls, hosts: Vec<String>, sites: Arc<ArcSwap<Sites>>, permits: Arc<Semaphore>) {
+async fn serve_tls(
+    tls: config::Tls,
+    hosts: Vec<String>,
+    sites: Arc<ArcSwap<Sites>>,
+    permits: Arc<Semaphore>,
+) {
     let mut state = AcmeConfig::new(hosts)
         .contact_push(format!("mailto:{}", tls.contact))
         .cache(DirCache::new(tls.cache_dir.clone()))
         .directory_lets_encrypt(tls.production)
         .state();
     let challenge_config = state.challenge_rustls_config();
-    let mut server_config = ServerConfig::builder().with_no_client_auth().with_cert_resolver(state.resolver());
+    let mut server_config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_cert_resolver(state.resolver());
     server_config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
     let server_config = Arc::new(server_config);
 
@@ -140,11 +181,17 @@ async fn serve_tls(tls: config::Tls, hosts: Vec<String>, sites: Arc<ArcSwap<Site
     });
 
     let addr = tls.https_listen.clone();
-    let listener = TcpListener::bind(&addr).await.unwrap_or_else(|e| panic!("bind {addr}: {e}"));
+    let listener = TcpListener::bind(&addr)
+        .await
+        .unwrap_or_else(|e| panic!("bind {addr}: {e}"));
     tracing::info!(%addr, production = tls.production, "https listening");
     loop {
-        let Ok((tcp, _)) = listener.accept().await else { continue };
-        let Ok(permit) = permits.clone().try_acquire_owned() else { continue };
+        let Ok((tcp, _)) = listener.accept().await else {
+            continue;
+        };
+        let Ok(permit) = permits.clone().try_acquire_owned() else {
+            continue;
+        };
         let sites = sites.clone();
         let challenge_config = challenge_config.clone();
         let server_config = server_config.clone();
@@ -152,14 +199,19 @@ async fn serve_tls(tls: config::Tls, hosts: Vec<String>, sites: Arc<ArcSwap<Site
             let _permit = permit;
             let _ = tcp.set_nodelay(true);
             let handshake = async {
-                let start = LazyConfigAcceptor::new(Default::default(), tcp).await.ok()?;
+                let start = LazyConfigAcceptor::new(Default::default(), tcp)
+                    .await
+                    .ok()?;
                 if is_tls_alpn_challenge(&start.client_hello()) {
                     let _ = start.into_stream(challenge_config).await;
                     return None;
                 }
                 start.into_stream(server_config).await.ok()
             };
-            let Ok(Some(stream)) = tokio::time::timeout(TLS_HANDSHAKE_TIMEOUT, handshake).await else { return };
+            let Ok(Some(stream)) = tokio::time::timeout(TLS_HANDSHAKE_TIMEOUT, handshake).await
+            else {
+                return;
+            };
             let svc = service_fn(move |req| {
                 let sites = sites.load();
                 let resp = handler::handle(&req, &sites, Scheme::Https);

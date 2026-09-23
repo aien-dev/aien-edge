@@ -59,8 +59,10 @@ fn default_max_conns() -> usize {
 
 impl Config {
     pub fn load(path: &std::path::Path) -> Result<Self, String> {
-        let text = std::fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
-        let cfg: Config = toml::from_str(&text).map_err(|e| format!("parse {}: {e}", path.display()))?;
+        let text =
+            std::fs::read_to_string(path).map_err(|e| format!("read {}: {e}", path.display()))?;
+        let cfg: Config =
+            toml::from_str(&text).map_err(|e| format!("parse {}: {e}", path.display()))?;
         if cfg.sites.is_empty() {
             return Err("config has no [[site]] entries".into());
         }
