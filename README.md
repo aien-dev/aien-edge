@@ -10,15 +10,19 @@ A small native Rust edge server for the AIEN static sites (`www.aienos.com`, `ww
 
 ## Measured
 
-On the Spark (aarch64), serving both built sites from one process, HTTP/1.1 keep-alive, brotli:
+On the Spark (aarch64), serving both built sites from one process, HTTP/1.1 keep-alive, brotli, against a page that returns 200 (`/research`, 6036 bytes brotli). Three runs:
 
 ```
-$ ab -k -n 50000 -c 64 -H "Host: www.drakestapleton.com" -H "Accept-Encoding: br" http://127.0.0.1:18777/dad
+$ ab -k -n 50000 -c 64 -H "Host: www.drakestapleton.com" -H "Accept-Encoding: br" http://127.0.0.1:18777/research
+Document Length:        6036 bytes
+Complete requests:      50000
 Failed requests:        0
-Requests per second:    191460.85 [#/sec] (mean)
-Time per request:       0.334 [ms] (mean)
-VmRSS:                  18276 kB   (VmHWM 30452 kB)
+Requests per second:    208785.70 / 192780.75 / 196101.50 [#/sec] (mean)
+Time per request:       0.307 / 0.332 / 0.326 [ms] (mean)
+VmRSS:                  18316 kB   (VmHWM 35924 kB)
 ```
+
+`ab` counts only dropped connections as failed. Check that the output has no `Non-2xx responses` line, or the run measured an error page.
 
 A Pi will be slower than the Spark, and real visitors are bound by the home uplink long before either.
 
