@@ -1,0 +1,23 @@
+# /etc/aien-edge/config.toml on the edge host (the Raspberry Pi).
+
+http_listen = "[::]:80"
+max_connections = 2048
+
+[tls]
+https_listen = "[::]:443"
+contact = "aien@aienos.com"
+# systemd StateDirectory=aien-edge maps to /var/lib/aien-edge.
+cache_dir = "/var/lib/aien-edge/acme"
+# Start with false (Let's Encrypt staging) until both hosts issue cleanly, then set true.
+production = false
+
+[[site]]
+host = "www.aienos.com"
+redirect_from = ["aienos.com"]
+root = "/srv/sites/aienos.com"
+spa = true
+
+[[site]]
+host = "www.drakestapleton.com"
+redirect_from = ["drakestapleton.com"]
+root = "/srv/sites/drakestapleton.com"

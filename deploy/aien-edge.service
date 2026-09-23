@@ -1,0 +1,37 @@
+[Unit]
+Description=aien-edge static site server (www.aienos.com, www.drakestapleton.com)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/aien-edge /etc/aien-edge/config.toml
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+RestartSec=2
+
+# Runs as a throwaway user with no shell, no home, and no write access
+# outside its certificate cache.
+DynamicUser=yes
+StateDirectory=aien-edge
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+ReadOnlyPaths=/srv/sites
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
