@@ -1,5 +1,9 @@
 # aien-edge
 
+## Copyright
+
+Copyright (c) 2026 Drake Stapleton <aien@aienos.com> and AIEN Contributors. Authored by Drake Stapleton in collaboration with AIEN.
+
 A small native Rust edge server for the AIEN static sites (`www.aienos.com`, `www.drakestapleton.com`). It runs on a Raspberry Pi at the network edge so the NVIDIA DGX Spark never faces the internet.
 
 - **Everything in memory.** Each site is read once at startup, precompressed with brotli (quality 11) and gzip, and hashed for ETags. Requests never touch the disk.
@@ -50,4 +54,4 @@ Network: forward TCP 80 and 443 on the router to the Pi only, and point the DNS 
 
 ## License
 
-Apache License 2.0 with LLVM Exception. See [LICENSE](LICENSE). Values live in the nonbinding [COVENANT.md](COVENANT.md).
+Licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later). See [LICENSE](LICENSE). Values live in the nonbinding [COVENANT.md](COVENANT.md).
