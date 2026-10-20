@@ -2,7 +2,7 @@
 
 A small native Rust web server for the AIEN static sites (`www.aienos.com`, `www.drakestapleton.com`). It was built to run on a Raspberry Pi at the network edge so the NVIDIA DGX Spark never faces the internet.
 
-Supports [Aienix](https://github.com/aien-dev/aienix), the core tree of AIEN. This is hosting infrastructure, not part of the core.
+Supports [AienOS](https://github.com/aien-dev/aienix), the core tree of AIEN. This is hosting infrastructure, not part of the core.
 
 **Status (2026-10-18): not in use.** Both sites are served by GitHub Pages today (their DNS records point at `aien-dev.github.io`), so this server is not serving either of them. The code was written on 2026-09-23. Changes since then are a relicense (2026-10-04), a README correction (2026-10-13) and a security update of the TLS library (2026-10-17). The publish script still builds sites with `npm`, which no longer matches how either site is built (both use Rust generators now), so it would need updating before any redeploy.
 
