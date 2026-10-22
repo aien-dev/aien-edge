@@ -1,0 +1,22 @@
+gate: AIEN_EDGE-TEST
+manifest_version: 2
+owner: aien-edge
+requires:
+  - host
+inputs:
+  - Cargo.toml
+  - Cargo.lock
+  - src/
+  - crates/
+  - tests/
+  - tests/gates/
+  - deploy/
+run:
+  exec: tests/gates/run.sh
+  args: ["test"]
+expects:
+  exit: 0
+  verdict: PASS
+timeout: 30m
+exactness: EXACT
+cache_scope: machine
