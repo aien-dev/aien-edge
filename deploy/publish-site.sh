@@ -4,12 +4,18 @@
 #   deploy/publish-site.sh aienos.com ~/workspace/aienos.com
 #   deploy/publish-site.sh drakestapleton.com ~/workspace/drakestapleton.com
 #
-# EDGE_HOST defaults to the Pi on the direct Spark link.
+# EDGE_HOST (ssh target of the edge host) comes from the environment or from
+# deploy/publish.env (local-only, git-ignored; see deploy/publish.env.example).
 set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+if [ -z "${EDGE_HOST:-}" ] && [ -f "$here/publish.env" ]; then
+  . "$here/publish.env"
+fi
 
 name="${1:?site name, for example aienos.com}"
 src="${2:?path to the site checkout}"
-edge="${EDGE_HOST:-edge@10.10.10.2}"
+edge="${EDGE_HOST:?set EDGE_HOST or create deploy/publish.env}"
 
 cd "$src"
 npm ci --no-audit --no-fund
