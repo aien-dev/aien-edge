@@ -1,5 +1,18 @@
 # aien-edge
 
+## Human-Directed Agentic Engineering
+
+Development follows Human-Directed Agentic Engineering (HDAE): humans define goals,
+architecture, constraints, acceptance criteria, and stopping points; agents implement,
+execute checks, diagnose failures, and revise within those boundaries. Human review
+retains responsibility for claims, acceptance, and release decisions. This describes
+development, not the server's runtime behavior or deployment status.
+
+For the documented method and a systems-software case study, see Gregory M. Kurtzer,
+[*Ginux: Building an Independent Kernel That Runs Linux Userspace through
+Human-Directed Agentic Engineering* (2026)](https://doi.org/10.5281/zenodo.23682548).
+
+
 A small native Rust web server for the AIEN static sites (`www.aienos.com`, `www.drakestapleton.com`). It was built to run on a Raspberry Pi at the network edge so the NVIDIA DGX Spark never faces the internet.
 
 Supports [Aienix](https://github.com/aien-dev/aienix), the core tree of AIEN. This is hosting infrastructure, not part of the core.
